@@ -165,6 +165,7 @@ class BaseLIFLayer(nn.Module):
     def init_state(self, Sin_t):
         dtype = Sin_t.dtype
         device = self.base_layer.weight.device
+        device = "cuda"
         input_shape = list(Sin_t.shape)
         out_ch = self.get_out_channels(self.base_layer)
         out_shape = self.get_out_shape(self.base_layer, input_shape)
