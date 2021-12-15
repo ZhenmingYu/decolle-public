@@ -154,35 +154,6 @@ class LenetDECOLLEMemristor(LenetDECOLLE):
             self.dropout_layers.append(dropout_layer)
         return (output_shape,)
 
-    def step(self, input, *args, **kwargs):
-        s_out = []
-        r_out = []
-        u_out = []
-        i = 0
-        for lif, pool, ro, do in zip(self.LIF_layers, self.pool_layers, self.readout_layers, self.dropout_layers):
-            if i == self.num_conv_layers: 
-                input = input.view(input.size(0), -1)
-            if input.device == torch.device('cpu'):
-                print("Input tensor was on CPU, Moving to GPU")
-                input = input.to(device='cuda')
-            s, u = lif(input)
-            u_p = pool(u)
-            if i+1 == self.num_layers and self.with_output_layer:
-                s_ = sigmoid(u_p)
-                sd_ = u_p
-            else:
-                s_ = lif.sg_function(u_p)
-                sd_ = do(s_)
-            r_ = ro(sd_.reshape(sd_.size(0), -1))
-
-            s_out.append(s_) 
-            r_out.append(r_)
-            u_out.append(u_p)
-            input = s_.detach() if lif.do_detach else s_
-            i+=1
-
-        return s_out, r_out, u_out
-
     def get_input_layer_device(self):
         if hasattr(self.LIF_layers[0], 'get_device'):
             if self.LIF_layers[0].get_device() == torch.device('cpu'):
