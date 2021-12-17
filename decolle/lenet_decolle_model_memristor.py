@@ -157,7 +157,7 @@ class LenetDECOLLEMemristor(LenetDECOLLE):
     def get_input_layer_device(self):
         if hasattr(self.LIF_layers[0], 'get_device'):
             if self.LIF_layers[0].get_device() == torch.device('cpu'):
-                print("Faking device type to 'cuda'")
+                print("Faking device type as 'cuda'")
                 return torch.device('cuda')
             return self.LIF_layers[0].get_device() 
         else:
