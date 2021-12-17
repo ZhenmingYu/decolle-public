@@ -90,18 +90,3 @@ The hard part is finished.
 ## License
 
 This project is licensed under the GPLv3 License - see the [LICENSE.txt](LICENSE.txt) file for details
-
-# Work progress update
-Memory issue found and fixed by changing the optimizor to aihwkit.optim.AnalogSGD
-For comparison, when "use_analog_layer" was set as False in train_lenet_decolle_memristor.py,
-the optimizer is also set as SGD rather than Adam.
-## Results
-Only tried with default setups.
-rpu_config as well as other settings have not been configured.
-
-The default was to simulate isolated memristor devices with constant steps
-(see https://aihwkit.readthedocs.io/en/latest/using_simulator.html#rpu-configurations under Single resistive devices/ConstantStepDevice)
-
-With this configuration, default decolle network with 3 conv2d layers takes about 1:40 to run a training epoch.
-As a comperison, the implimentations with torch.nn layers takes about 0:18 for one training epoch.
-Both results were obtained from 1 RTX3090 gpu.
