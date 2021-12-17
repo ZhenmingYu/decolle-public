@@ -15,6 +15,14 @@ import datetime, os, socket, tqdm
 import numpy as np
 import torch
 import importlib
+from aihwkit.optim import AnalogSGD
+
+# Set memristor properties
+use_analog_layer = True # switch between aihwkit.nn layers and torch.nn layers for neuron base layer
+rpu_config = None
+realistic_read_write = False
+weight_scaling_omega = 0.0
+
 
 np.set_printoptions(precision=4)
 args = parse_args('parameters/params.yml')
@@ -70,19 +78,29 @@ net = LenetDECOLLEMemristor( out_channels=params['out_channels'],
                     lif_layer_type = LIFLayer,
                     method=params['learning_method'],
                     with_output_layer=params['with_output_layer'],
-                    use_analog_layer = True,
-                    rpu_config = None,
-                    realistic_read_write = False,
-                    weight_scaling_omega = 0.0).to(device)
+                    use_analog_layer = use_analog_layer,
+                    rpu_config = rpu_config,
+                    realistic_read_write = realistic_read_write,
+                    weight_scaling_omega = weight_scaling_omega).to(device)
 
 if hasattr(params['learning_rate'], '__len__'):
     from decolle.utils import MultiOpt
     opts = []
-    for i in range(len(params['learning_rate'])):
-        opts.append(torch.optim.Adamax(net.get_trainable_parameters(i), lr=params['learning_rate'][i], betas=params['betas']))
+    if use_analog_layer:
+        for i in range(len(params['learning_rate'])):
+            single_opt = AnalogSGD(net.get_trainable_parameters(i), lr=params['learning_rate'][i])
+            single_opt.regroup_param_groups(net)
+            opts.append(single_opt)
+    else:
+        for i in range(len(params['learning_rate'])):
+            opts.append(torch.optim.SGD(net.get_trainable_parameters(i), lr=params['learning_rate'][i]))
     opt = MultiOpt(*opts)
 else:
-    opt = torch.optim.Adamax(net.get_trainable_parameters(), lr=params['learning_rate'], betas=params['betas'])
+    if use_analog_layer:
+        opt = AnalogSGD(net.get_trainable_parameters(), lr=params['learning_rate'])
+        opt.regroup_param_groups(net)
+    else:
+        opt = torch.optim.SGD(net.get_trainable_parameters(), lr=params['learning_rate'])
 
 reg_l = params['reg_l'] if 'reg_l' in params else None
 
@@ -147,7 +165,6 @@ if not args.no_train:
             if not args.no_save:
                 write_stats(e, test_acc, test_loss, writer)
                 np.save(log_dir+'/test_acc.npy', np.array(test_acc_hist),)
-
         total_loss, act_rate = train(gen_train, decolle_loss, net, opt, e, params['burnin_steps'], online_update=params['online_update'])
         if not args.no_save:
             for i in range(len(net)):
